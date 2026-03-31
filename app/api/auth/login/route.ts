@@ -13,6 +13,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if database is available
+    if (!db) {
+      return NextResponse.json(
+        { error: 'Database is not available. Authentication is temporarily disabled.' },
+        { status: 503 }
+      );
+    }
+
     try {
       // Find user by email
       const user = db.prepare(
@@ -56,7 +64,7 @@ export async function POST(request: NextRequest) {
     } catch (dbError: any) {
       console.error('Database error:', dbError);
       return NextResponse.json(
-        { error: 'Internal server error' },
+        { error: 'Database operation failed' },
         { status: 500 }
       );
     }
@@ -64,8 +72,8 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Login error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { error: 'Invalid request format' },
+      { status: 400 }
     );
   }
 }

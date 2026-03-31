@@ -20,6 +20,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if database is available
+    if (!db) {
+      return NextResponse.json(
+        { error: 'Database is not available. Registration is temporarily disabled.' },
+        { status: 503 }
+      );
+    }
+
     try {
       // Check if user already exists
       const existingUser = db.prepare(
@@ -59,14 +67,18 @@ export async function POST(request: NextRequest) {
           { status: 409 }
         );
       }
-      throw dbError;
+      console.error('Database error:', dbError);
+      return NextResponse.json(
+        { error: 'Database operation failed' },
+        { status: 500 }
+      );
     }
 
   } catch (error) {
     console.error('Registration error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { error: 'Invalid request format' },
+      { status: 400 }
     );
   }
 }

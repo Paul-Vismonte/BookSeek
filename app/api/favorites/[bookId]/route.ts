@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connection from '@/database/connection';
+import db from '@/database/connection-sqlite';
 import { getTokenFromHeaders, verifyToken } from '@/utils/auth';
 
 export async function DELETE(
@@ -24,31 +24,35 @@ export async function DELETE(
       );
     }
 
-    const db = await connection.getConnection();
+    // Check if database is available
+    if (!db) {
+      return NextResponse.json(
+        { error: 'Database is not available. Favorites are temporarily disabled.' },
+        { status: 503 }
+      );
+    }
     
     try {
       // Find book ID by Google Books ID
-      const [bookRows] = await db.execute(
-        'SELECT id FROM books WHERE google_books_id = ?',
-        [bookId]
-      ) as [any[], any];
+      const book = db.prepare(
+        'SELECT id FROM books WHERE google_books_id = ?'
+      ).get(bookId) as { id: number } | undefined;
 
-      if (!Array.isArray(bookRows) || bookRows.length === 0) {
+      if (!book) {
         return NextResponse.json(
           { error: 'Book not found' },
           { status: 404 }
         );
       }
 
-      const dbBookId = (bookRows[0] as any).id;
+      const dbBookId = book.id;
 
       // Remove from favorites
-      const [result] = await db.execute(
-        'DELETE FROM favorites WHERE user_id = ? AND book_id = ?',
-        [decoded.userId, dbBookId]
-      ) as [any, any];
+      const result = db.prepare(
+        'DELETE FROM favorites WHERE user_id = ? AND book_id = ?'
+      ).run(decoded.userId, dbBookId);
 
-      if ((result as any).affectedRows === 0) {
+      if (result.changes === 0) {
         return NextResponse.json(
           { error: 'Book not in favorites' },
           { status: 404 }
@@ -60,15 +64,19 @@ export async function DELETE(
         { status: 200 }
       );
 
-    } finally {
-      db.release();
+    } catch (dbError: any) {
+      console.error('Database error:', dbError);
+      return NextResponse.json(
+        { error: 'Database operation failed' },
+        { status: 500 }
+      );
     }
 
   } catch (error) {
     console.error('Remove favorite error:', error);
     return NextResponse.json(
-      { error: 'Failed to remove favorite' },
-      { status: 500 }
+      { error: 'Invalid request format' },
+      { status: 400 }
     );
   }
 }

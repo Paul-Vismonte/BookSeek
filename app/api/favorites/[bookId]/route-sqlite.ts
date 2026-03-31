@@ -24,9 +24,17 @@ export async function DELETE(
       );
     }
 
+    // Check if database is available
+    if (!db) {
+      return NextResponse.json(
+        { error: 'Database is not available. Favorites are temporarily disabled.' },
+        { status: 503 }
+      );
+    }
+
     try {
       // Find book ID by Google Books ID
-      const bookRow = db.prepare(
+      const bookRow = db!.prepare(
         'SELECT id FROM books WHERE google_books_id = ?'
       ).get(bookId) as { id: number } | undefined;
 
@@ -38,7 +46,7 @@ export async function DELETE(
       }
 
       // Remove from favorites
-      const result = db.prepare(
+      const result = db!.prepare(
         'DELETE FROM favorites WHERE user_id = ? AND book_id = ?'
       ).run(decoded.userId, bookRow.id);
 

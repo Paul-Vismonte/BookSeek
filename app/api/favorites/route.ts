@@ -20,6 +20,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Check if database is available
+    if (!db) {
+      return NextResponse.json(
+        { favorites: [] },
+        { status: 200 }
+      );
+    }
+
     try {
       const favorites = db.prepare(`
         SELECT 
@@ -55,8 +63,8 @@ export async function GET(request: NextRequest) {
     } catch (dbError: any) {
       console.error('Database error:', dbError);
       return NextResponse.json(
-        { error: 'Failed to fetch favorites' },
-        { status: 500 }
+        { favorites: [] },
+        { status: 200 }
       );
     }
 
@@ -87,6 +95,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if database is available
+    if (!db) {
+      return NextResponse.json(
+        { error: 'Database is not available. Favorites are temporarily disabled.' },
+        { status: 503 }
+      );
+    }
+
     const { googleBooksId, title, author, description, coverUrl, publishDate, isbn, pageCount, categories } = await request.json();
 
     if (!googleBooksId || !title) {
@@ -98,9 +114,9 @@ export async function POST(request: NextRequest) {
 
     try {
       // Start transaction
-      const transaction = db.transaction(() => {
+      const transaction = db!.transaction(() => {
         // Check if book already exists
-        const existingBook = db.prepare(
+        const existingBook = db!.prepare(
           'SELECT id FROM books WHERE google_books_id = ?'
         ).get(googleBooksId) as { id: number } | undefined;
 
@@ -110,7 +126,7 @@ export async function POST(request: NextRequest) {
           bookId = existingBook.id;
         } else {
           // Insert new book
-          const insertResult = db.prepare(
+          const insertResult = db!.prepare(
             `INSERT INTO books (google_books_id, title, author, description, cover_url, publish_date, isbn, page_count, categories) 
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
           ).run(
@@ -128,7 +144,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Check if already favorited
-        const existingFavorite = db.prepare(
+        const existingFavorite = db!.prepare(
           'SELECT id FROM favorites WHERE user_id = ? AND book_id = ?'
         ).get(decoded.userId, bookId);
 
@@ -137,7 +153,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Add to favorites
-        db.prepare(
+        db!.prepare(
           'INSERT INTO favorites (user_id, book_id) VALUES (?, ?)'
         ).run(decoded.userId, bookId);
       });
@@ -156,14 +172,18 @@ export async function POST(request: NextRequest) {
           { status: 409 }
         );
       }
-      throw dbError;
+      console.error('Database error:', dbError);
+      return NextResponse.json(
+        { error: 'Database operation failed' },
+        { status: 500 }
+      );
     }
 
   } catch (error) {
     console.error('Add favorite error:', error);
     return NextResponse.json(
-      { error: 'Failed to add favorite' },
-      { status: 500 }
+      { error: 'Invalid request format' },
+      { status: 400 }
     );
   }
 }
