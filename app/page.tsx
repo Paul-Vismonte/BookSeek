@@ -47,14 +47,16 @@ function SearchResults() {
       const response = await fetch(`/api/books/search?q=${encodeURIComponent(searchQuery)}&maxResults=${booksPerPage}&startIndex=${startIndex}`);
       
       if (!response.ok) {
-        throw new Error('Failed to search books');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to search books');
       }
 
       const data = await response.json();
       setBooks(data.books || []);
       setTotalItems(data.totalItems || 0);
     } catch (err) {
-      setError('Failed to search books. Please try again.');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to search books. Please try again.';
+      setError(errorMessage);
       console.error('Search error:', err);
     } finally {
       setLoading(false);

@@ -16,15 +16,34 @@ export async function GET(request: NextRequest) {
     }
 
     // First, get the total count
-    const countUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=1`;
-    const countResponse = await fetch(countUrl);
+    const apiKey = process.env.GOOGLE_BOOKS_API_KEY;
+    let countUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=1`;
     
-    if (!countResponse.ok) {
-      throw new Error(`Google Books API error: ${countResponse.status}`);
+    if (apiKey) {
+      countUrl += `&key=${apiKey}`;
     }
 
-    const countData = await countResponse.json();
-    const totalItems = countData.totalItems || 0;
+    const countResponse = await fetch(countUrl, {
+      headers: {
+        'User-Agent': 'BookSeek/1.0'
+      },
+      signal: AbortSignal.timeout(5000)
+    });
+    
+    if (!countResponse.ok) {
+      if (countResponse.status === 503 || countResponse.status === 429) {
+        // For API errors, we'll let the BooksService handle fallback
+        console.log(`Google Books API error ${countResponse.status}, proceeding with search service fallback`);
+      } else {
+        throw new Error(`Google Books API error: ${countResponse.status}`);
+      }
+    }
+
+    let totalItems = 0;
+    if (countResponse.ok) {
+      const countData = await countResponse.json();
+      totalItems = countData.totalItems || 0;
+    }
 
     // Then get the actual results
     const books = await BooksService.searchBooks(query, maxResults, startIndex);
@@ -38,8 +57,24 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Book search error:', error);
+    
+    // Return more specific error messages
+    if (error instanceof Error) {
+      if (error.message.includes('temporarily unavailable')) {
+        return NextResponse.json(
+          { error: error.message },
+          { status: 503 }
+        );
+      } else if (error.message.includes('Rate limit')) {
+        return NextResponse.json(
+          { error: error.message },
+          { status: 429 }
+        );
+      }
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to search books' },
+      { error: 'Failed to search books. Please try again.' },
       { status: 500 }
     );
   }
