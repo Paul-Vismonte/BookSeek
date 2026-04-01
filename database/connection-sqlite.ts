@@ -1,8 +1,9 @@
 import Database from 'better-sqlite3';
 import { mkdirSync } from 'fs';
 import { join } from 'path';
+import MockDatabase from './mock-db';
 
-let db: Database.Database | null = null;
+let db: Database.Database | MockDatabase | null = null;
 let dbInitialized = false;
 
 function initializeDatabase() {
@@ -10,12 +11,15 @@ function initializeDatabase() {
     return db;
   }
 
-  // Only try to initialize database if we're not in a serverless environment
+  // Check if we're in a serverless environment (Vercel)
   const isServerless = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
   
   console.log('Environment check - VERCEL:', process.env.VERCEL, 'NODE_ENV:', process.env.NODE_ENV, 'isServerless:', isServerless);
 
-  if (!isServerless) {
+  if (isServerless) {
+    console.log('Using mock database for serverless environment');
+    db = new MockDatabase();
+  } else {
     try {
       // Ensure database directory exists
       const dbDir = join(process.cwd(), 'database');
@@ -66,15 +70,11 @@ function initializeDatabase() {
         CREATE INDEX IF NOT EXISTS idx_favorites_book_id ON favorites(book_id);
       `);
       
-      console.log('Database initialized successfully');
+      console.log('Real database initialized successfully');
     } catch (error) {
-      console.error('Failed to initialize database:', error);
-      console.log('Running in database-less mode (authentication will be limited)');
-      db = null;
+      console.error('Failed to initialize real database, falling back to mock:', error);
+      db = new MockDatabase();
     }
-  } else {
-    console.log('Running in serverless mode - database disabled');
-    db = null;
   }
 
   dbInitialized = true;

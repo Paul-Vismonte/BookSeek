@@ -17,13 +17,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if database is available
+    // Get database (will be mock on Vercel, real on local)
     const db = getDatabase();
     if (!db) {
-      console.log('Login: Database not available');
+      console.log('Login: Database initialization failed');
       return NextResponse.json(
-        { error: 'Database is not available. Authentication is temporarily disabled.' },
-        { status: 503 }
+        { error: 'Database initialization failed' },
+        { status: 500 }
       );
     }
 

@@ -24,12 +24,12 @@ export async function DELETE(
       );
     }
 
-    // Check if database is available
+    // Get database (will be mock on Vercel, real on local)
     const db = getDatabase();
     if (!db) {
       return NextResponse.json(
-        { error: 'Database is not available. Favorites are temporarily disabled.' },
-        { status: 503 }
+        { error: 'Database initialization failed' },
+        { status: 500 }
       );
     }
     
