@@ -7,6 +7,8 @@ let db: Database.Database | null = null;
 // Only try to initialize database if we're not in a serverless environment
 const isServerless = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
 
+console.log('Environment check - VERCEL:', process.env.VERCEL, 'NODE_ENV:', process.env.NODE_ENV, 'isServerless:', isServerless);
+
 if (!isServerless) {
   try {
     // Ensure database directory exists
