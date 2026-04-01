@@ -1,9 +1,8 @@
-import Database from 'better-sqlite3';
 import { mkdirSync } from 'fs';
 import { join } from 'path';
 import MockDatabase from './mock-db';
 
-let db: Database.Database | MockDatabase | null = null;
+let db: any = null;
 let dbInitialized = false;
 
 function initializeDatabase() {
@@ -21,6 +20,9 @@ function initializeDatabase() {
     db = new MockDatabase();
   } else {
     try {
+      // Import better-sqlite3 only when needed
+      const Database = require('better-sqlite3').default;
+      
       // Ensure database directory exists
       const dbDir = join(process.cwd(), 'database');
       mkdirSync(dbDir, { recursive: true });
