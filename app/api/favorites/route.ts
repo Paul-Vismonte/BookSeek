@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import db from '@/database/connection-sqlite';
+import { getDatabase } from '@/database/connection-sqlite';
 import { getTokenFromHeaders, verifyToken } from '@/utils/auth';
 
 export async function GET(request: NextRequest) {
@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if database is available
+    const db = getDatabase();
     if (!db) {
       return NextResponse.json(
         { favorites: [] },
@@ -96,6 +97,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if database is available
+    const db = getDatabase();
     if (!db) {
       return NextResponse.json(
         { error: 'Database is not available. Favorites are temporarily disabled.' },

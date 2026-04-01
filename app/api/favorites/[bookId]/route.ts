@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import db from '@/database/connection-sqlite';
+import { getDatabase } from '@/database/connection-sqlite';
 import { getTokenFromHeaders, verifyToken } from '@/utils/auth';
 
 export async function DELETE(
@@ -25,6 +25,7 @@ export async function DELETE(
     }
 
     // Check if database is available
+    const db = getDatabase();
     if (!db) {
       return NextResponse.json(
         { error: 'Database is not available. Favorites are temporarily disabled.' },
@@ -34,21 +35,21 @@ export async function DELETE(
     
     try {
       // Find book ID by Google Books ID
-      const book = db.prepare(
+      const bookRow = db!.prepare(
         'SELECT id FROM books WHERE google_books_id = ?'
       ).get(bookId) as { id: number } | undefined;
 
-      if (!book) {
+      if (!bookRow) {
         return NextResponse.json(
           { error: 'Book not found' },
           { status: 404 }
         );
       }
 
-      const dbBookId = book.id;
+      const dbBookId = bookRow.id;
 
       // Remove from favorites
-      const result = db.prepare(
+      const result = db!.prepare(
         'DELETE FROM favorites WHERE user_id = ? AND book_id = ?'
       ).run(decoded.userId, dbBookId);
 

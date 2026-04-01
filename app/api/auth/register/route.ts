@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import db from '@/database/connection-sqlite';
+import { getDatabase } from '@/database/connection-sqlite';
 import { hashPassword, generateToken } from '@/utils/auth';
 
 export async function POST(request: NextRequest) {
@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if database is available
+    const db = getDatabase();
     if (!db) {
       console.log('Database not available');
       return NextResponse.json(
