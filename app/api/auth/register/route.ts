@@ -3,10 +3,14 @@ import db from '@/database/connection-sqlite';
 import { hashPassword, generateToken } from '@/utils/auth';
 
 export async function POST(request: NextRequest) {
+  console.log('Register API called');
+  
   try {
     const { username, email, password } = await request.json();
+    console.log('Request data received:', { username, email: email ? 'provided' : 'missing', password: password ? 'provided' : 'missing' });
 
     if (!username || !email || !password) {
+      console.log('Validation failed: missing fields');
       return NextResponse.json(
         { error: 'Username, email, and password are required' },
         { status: 400 }
@@ -14,6 +18,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (password.length < 6) {
+      console.log('Validation failed: password too short');
       return NextResponse.json(
         { error: 'Password must be at least 6 characters long' },
         { status: 400 }
@@ -22,6 +27,7 @@ export async function POST(request: NextRequest) {
 
     // Check if database is available
     if (!db) {
+      console.log('Database not available');
       return NextResponse.json(
         { error: 'Database is not available. Registration is temporarily disabled.' },
         { status: 503 }

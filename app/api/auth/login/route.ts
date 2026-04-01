@@ -3,10 +3,14 @@ import db from '@/database/connection-sqlite';
 import { comparePassword, generateToken } from '@/utils/auth';
 
 export async function POST(request: NextRequest) {
+  console.log('Login API called');
+  
   try {
     const { email, password } = await request.json();
+    console.log('Login request received:', { email: email ? 'provided' : 'missing', password: password ? 'provided' : 'missing' });
 
     if (!email || !password) {
+      console.log('Login validation failed: missing fields');
       return NextResponse.json(
         { error: 'Email and password are required' },
         { status: 400 }
@@ -15,6 +19,7 @@ export async function POST(request: NextRequest) {
 
     // Check if database is available
     if (!db) {
+      console.log('Login: Database not available');
       return NextResponse.json(
         { error: 'Database is not available. Authentication is temporarily disabled.' },
         { status: 503 }
