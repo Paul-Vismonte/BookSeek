@@ -93,9 +93,14 @@ export class BooksService {
     } catch (error) {
       console.error('Error searching books:', error);
       
-      // If there's a network error or other issue, try mock data as fallback
-      if (error instanceof Error && (error.name === 'AbortError' || error.message.includes('fetch'))) {
-        console.log('Network error, using mock data as fallback');
+      // If there's a network error, timeout, or 503 error, try mock data as fallback
+      if (error instanceof Error && (
+        error.name === 'AbortError' || 
+        error.message.includes('fetch') ||
+        error.message.includes('503') ||
+        error.message.includes('temporarily unavailable')
+      )) {
+        console.log('API error (503/network), using mock data as fallback');
         return getMockBooks(query, maxResults);
       }
       

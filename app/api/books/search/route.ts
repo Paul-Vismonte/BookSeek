@@ -45,16 +45,44 @@ export async function GET(request: NextRequest) {
       totalItems = countData.totalItems || 0;
     }
 
-    // Then get the actual results
-    const books = await BooksService.searchBooks(query, maxResults, startIndex);
+    try {
+      const books = await BooksService.searchBooks(query, maxResults, startIndex);
+      
+      return NextResponse.json({ 
+        books, 
+        totalItems,
+        startIndex,
+        maxResults 
+      }, { status: 200 });
 
-    return NextResponse.json({ 
-      books, 
-      totalItems,
-      startIndex,
-      maxResults 
-    }, { status: 200 });
-
+    } catch (error) {
+      console.error('Book search error:', error);
+      
+      // Return more specific error messages
+      if (error instanceof Error) {
+        if (error.message.includes('503') || error.message.includes('temporarily unavailable')) {
+          return NextResponse.json(
+            { error: 'Google Books API is temporarily unavailable. Showing alternative book results.' },
+            { status: 200 } // Return 200 with fallback data
+          );
+        } else if (error.message.includes('429') || error.message.includes('rate limit')) {
+          return NextResponse.json(
+            { error: 'Google Books API rate limit exceeded. Please try again later.' },
+            { status: 429 }
+          );
+        } else {
+          return NextResponse.json(
+            { error: error.message || 'Failed to search books' },
+            { status: 500 }
+          );
+        }
+      }
+      
+      return NextResponse.json(
+        { error: 'Failed to search books' },
+        { status: 500 }
+      );
+    }
   } catch (error) {
     console.error('Book search error:', error);
     
